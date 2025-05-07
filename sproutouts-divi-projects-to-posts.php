@@ -3,7 +3,7 @@
  * Plugin Name: Sproutouts Divi Projects to Posts Migrator
  * Description: Migrates Divi Projects to regular posts while maintaining metadata and custom fields.
  * Author: Meagan Howey
- * Version: 1.0.0
+ * Version: 1.2.0
  * Plugin URI: https://sproutouts.com/sproutouts-divi-projects-to-posts-plugin/
  * Author URI: https://www.sproutouts.com
  */
@@ -102,36 +102,50 @@ function sp_dptp_migrate_projects($sp_dptp_dry_run = true, $sp_dptp_unregister =
               $assigned_cat_ids = array();
 
               foreach ($categories as $cat) {
-                  // Check if a subcategory with this name exists under 'Projects' CPT
-                  $existing = get_terms(array(
-                      'taxonomy' => 'category',
-                      'name' => $cat->name,
-                      'parent' => $sp_dptp_project_cat,
-                      'hide_empty' => false,
-                  ));
+                  $new_parent_id = $sp_dptp_project_cat; // Start under "Projects"
+                  $lineage = array();
 
-                  if (!empty($existing) && !is_wp_error($existing)) {
-                      $subcat_id = $existing[0]->term_id;
-                  } else {
-                      // Create the subcategory under 'Projects' blog post category
-                      $subcat_id = wp_insert_term($cat->name, 'category', array(
-                          'parent' => $sp_dptp_project_cat,
+                  // Build the full hierarchy upwards
+                  $current_cat = $cat;
+                  while ($current_cat && $current_cat->parent !== 0) {
+                      $lineage[] = $current_cat;
+                      $current_cat = get_term($current_cat->parent, 'category');
+                  }
+                  $lineage[] = $current_cat; // Add the top-most category
+                  $lineage = array_reverse($lineage); // Reverse to start from top parent
+
+                  // Create or find each category in the lineage under the new parent
+                  foreach ($lineage as $term) {
+                      $existing = get_terms(array(
+                          'taxonomy' => 'category',
+                          'name' => $term->name,
+                          'parent' => $new_parent_id,
+                          'hide_empty' => false,
                       ));
 
-                      if (is_wp_error($subcat_id)) {
-                          continue; // Skip this category if creation failed
+                      if (!empty($existing) && !is_wp_error($existing)) {
+                          $new_term_id = $existing[0]->term_id;
+                      } else {
+                          $new_term = wp_insert_term($term->name, 'category', array(
+                              'parent' => $new_parent_id,
+                          ));
+
+                          if (is_wp_error($new_term)) {
+                              continue 2; // Skip this category path on failure
+                          }
+
+                          $new_term_id = $new_term['term_id'];
                       }
 
-                      $subcat_id = $subcat_id['term_id'];
+                      $new_parent_id = $new_term_id; // Next child will go under this
                   }
 
-                  $assigned_cat_ids[] = $subcat_id;
+                  $assigned_cat_ids[] = $new_parent_id;
               }
 
-              // Also include the parent 'Projects' category
+              // Also ensure "Projects" parent category is assigned
               $assigned_cat_ids[] = $sp_dptp_project_cat;
 
-              // Assign all collected categories
               wp_set_post_categories($project->ID, $assigned_cat_ids);
 
 
