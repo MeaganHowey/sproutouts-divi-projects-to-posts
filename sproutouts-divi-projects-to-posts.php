@@ -97,6 +97,44 @@ function sp_dptp_migrate_projects($sp_dptp_dry_run = true, $sp_dptp_unregister =
                   'post_type' => 'post',
               ));
 
+              // Preserve default 'category' terms as subcategories under 'Projects' blog post category.
+              $categories = wp_get_post_terms($project->ID, 'category');
+              $assigned_cat_ids = array();
+
+              foreach ($categories as $cat) {
+                  // Check if a subcategory with this name exists under 'Projects' CPT
+                  $existing = get_terms(array(
+                      'taxonomy' => 'category',
+                      'name' => $cat->name,
+                      'parent' => $sp_dptp_project_cat,
+                      'hide_empty' => false,
+                  ));
+
+                  if (!empty($existing) && !is_wp_error($existing)) {
+                      $subcat_id = $existing[0]->term_id;
+                  } else {
+                      // Create the subcategory under 'Projects' blog post category
+                      $subcat_id = wp_insert_term($cat->name, 'category', array(
+                          'parent' => $sp_dptp_project_cat,
+                      ));
+
+                      if (is_wp_error($subcat_id)) {
+                          continue; // Skip this category if creation failed
+                      }
+
+                      $subcat_id = $subcat_id['term_id'];
+                  }
+
+                  $assigned_cat_ids[] = $subcat_id;
+              }
+
+              // Also include the parent 'Projects' category
+              $assigned_cat_ids[] = $sp_dptp_project_cat;
+
+              // Assign all collected categories
+              wp_set_post_categories($project->ID, $assigned_cat_ids);
+
+
               if ($sp_dptp_project_cat !== null) {
                 wp_set_post_categories($project->ID, array($sp_dptp_project_cat));
               }
