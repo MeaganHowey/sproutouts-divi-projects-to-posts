@@ -3,7 +3,7 @@
  * Plugin Name: Sproutouts Divi Projects to Posts Migrator
  * Description: Migrates Divi Projects to regular posts while maintaining metadata and custom fields.
  * Author: Meagan Howey
- * Version: 1.2.0
+ * Version: 1.2.1
  * Plugin URI: https://sproutouts.com/sproutouts-divi-projects-to-posts-plugin/
  * Author URI: https://www.sproutouts.com
  */

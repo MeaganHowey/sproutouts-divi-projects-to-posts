@@ -1,5 +1,7 @@
 # sproutouts-divi-projects-to-posts
 
+IMPORTANT: This plugin is still in development and has known bugs. While almost all metadata is preserved, currently the categories within the CPT and their subcategories are overwritten with simply the new "Projects" category in regular posts. Will update when this is fixed, but for now the project is deprecated.
+
 Official Page: https://sproutouts.com/sproutouts-divi-projects-to-posts-plugin/
 Migrates Divi Projects to regular posts while maintaining metadata and custom fields.
 
